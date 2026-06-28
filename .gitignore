@@ -1,0 +1,24 @@
+# Virtual environment
+venv/
+
+# InsightFace models (300MB+ hain, upload mat karo)
+.insightface/
+
+# Environment variables
+.env
+
+# Database
+*.db
+*.sqlite
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+attendance_log.txt
+
+# OS files
+.DS_Store
+Thumbs.db
