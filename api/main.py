@@ -14,16 +14,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# DB tables create karo
 Base.metadata.create_all(bind=engine)
 
-# InsightFace load karo
 app_ai = insightface.app.FaceAnalysis(providers=['CPUExecutionProvider'])
 app_ai.prepare(ctx_id=-1, det_size=(640, 640))
 
 app = FastAPI(title="Attendance System API")
 
-# CORS — React frontend ke liye
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,17 +28,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Health check ──────────────────────────────────────
 @app.get("/")
 def root():
     return {"status": "Attendance System API running!"}
 
-# ── Enrollment ────────────────────────────────────────
 @app.post("/enroll")
 async def enroll_person(
     name: str,
     role: str = "student",
-    roll_number: str = None,
+    enrollment_no: str = None,
+    department: str = None,
+    section: str = None,
+    email: str = None,
+    contact: str = None,
     file: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
@@ -54,10 +53,21 @@ async def enroll_person(
 
     embedding = faces[0].normed_embedding.tolist()
 
+    # Already enrolled hai?
+    existing = db.query(Person).filter(
+        Person.enrollment_no == enrollment_no
+    ).first()
+    if existing:
+        return {"status": "error", "message": f"{enrollment_no} already enrolled hai"}
+
     person = Person(
         name=name,
         role=role,
-        roll_number=roll_number,
+        enrollment_no=enrollment_no,
+        department=department,
+        section=section,
+        email=email,
+        contact=contact,
         embedding=json.dumps(embedding)
     )
     db.add(person)
@@ -66,7 +76,6 @@ async def enroll_person(
 
     return {"status": "success", "message": f"{name} enrolled!", "id": person.id}
 
-# ── Attendance log ────────────────────────────────────
 @app.post("/attendance/log")
 def log_attendance(
     person_id: int,
@@ -84,20 +93,20 @@ def log_attendance(
     db.commit()
     return {"status": "logged"}
 
-# ── Aaj ki attendance ─────────────────────────────────
 @app.get("/attendance/today")
 def today_attendance(db: Session = Depends(get_db)):
     today = date.today()
     logs = db.query(AttendanceLog).filter(
         func.date(AttendanceLog.timestamp) == today
     ).all()
-
     result = []
     for log in logs:
         person = db.query(Person).filter(Person.id == log.person_id).first()
         result.append({
             "name": person.name if person else "Unknown",
-            "roll_number": person.roll_number if person else None,
+            "enrollment_no": person.enrollment_no if person else None,
+            "department": person.department if person else None,
+            "section": person.section if person else None,
             "role": person.role if person else None,
             "confidence": log.confidence,
             "time": log.timestamp.strftime("%H:%M:%S"),
@@ -105,7 +114,6 @@ def today_attendance(db: Session = Depends(get_db)):
         })
     return result
 
-# ── Sab enrolled persons ──────────────────────────────
 @app.get("/persons")
 def get_persons(db: Session = Depends(get_db)):
     persons = db.query(Person).all()
@@ -113,11 +121,14 @@ def get_persons(db: Session = Depends(get_db)):
         "id": p.id,
         "name": p.name,
         "role": p.role,
-        "roll": p.roll_number,
+        "enrollment_no": p.enrollment_no,
+        "department": p.department,
+        "section": p.section,
+        "email": p.email,
+        "contact": p.contact,
         "embedding": p.embedding
     } for p in persons]
 
-# ── Attendance report ─────────────────────────────────
 @app.get("/attendance/report/{person_id}")
 def get_report(person_id: int, db: Session = Depends(get_db)):
     person = db.query(Person).filter(Person.id == person_id).first()
@@ -128,6 +139,8 @@ def get_report(person_id: int, db: Session = Depends(get_db)):
     ).all()
     return {
         "name": person.name,
+        "enrollment_no": person.enrollment_no,
+        "department": person.department,
         "role": person.role,
         "total_days": len(logs),
         "logs": [{
@@ -136,3 +149,22 @@ def get_report(person_id: int, db: Session = Depends(get_db)):
             "confidence": l.confidence
         } for l in logs]
     }
+
+@app.get("/attendance/export")
+def export_attendance(db: Session = Depends(get_db)):
+    logs = db.query(AttendanceLog).all()
+    result = []
+    for log in logs:
+        person = db.query(Person).filter(Person.id == log.person_id).first()
+        result.append({
+            "name": person.name if person else "Unknown",
+            "enrollment_no": person.enrollment_no if person else None,
+            "department": person.department if person else None,
+            "section": person.section if person else None,
+            "role": person.role if person else None,
+            "confidence": log.confidence,
+            "date": log.timestamp.strftime("%Y-%m-%d"),
+            "time": log.timestamp.strftime("%H:%M:%S"),
+            "camera": log.camera_id
+        })
+    return result

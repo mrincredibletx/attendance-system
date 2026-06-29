@@ -6,7 +6,11 @@ class Person(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     role = Column(String, default="student")
-    roll_number = Column(String, unique=True, nullable=True)
+    enrollment_no = Column(String, unique=True, nullable=True)
+    department = Column(String, nullable=True)
+    section = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    contact = Column(String, nullable=True)
     embedding = Column(String)
     created_at = Column(DateTime, default=func.now())
 
