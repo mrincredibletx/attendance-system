@@ -12,7 +12,7 @@ load_dotenv()
 API_URL = "http://127.0.0.1:8000"
 THRESHOLD = float(os.getenv("DETECTION_THRESHOLD", 0.4))
 CAMERA_INDEX = int(os.getenv("CAMERA_INDEX", 1))
-COOLDOWN_SECONDS = 60
+COOLDOWN_SECONDS = 3600
 
 app_ai = insightface.app.FaceAnalysis(providers=['CPUExecutionProvider'])
 app_ai.prepare(ctx_id=-1, det_size=(640, 640))

@@ -9,57 +9,81 @@ from PIL import Image
 from api.database import SessionLocal
 from api.models import Person
 
-# InsightFace load karo
 app_ai = insightface.app.FaceAnalysis(providers=['CPUExecutionProvider'])
 app_ai.prepare(ctx_id=-1, det_size=(640, 640))
 
-def name_to_folder(name: str, folders: list) -> Path | None:
-    """Excel name se folder match karo — flexible matching"""
-    name_clean = name.strip().lower().replace(" ", "-")
-    for folder in folders:
-        folder_clean = folder.name.lower()
-        if folder_clean == name_clean:
-            return folder
-        # Partial match bhi try karo
-        name_parts = set(name.strip().lower().split())
-        folder_parts = set(folder.name.lower().replace("-", " ").split())
-        if name_parts == folder_parts:
-            return folder
-    return None
+SUPPORTED = {'.jpg', '.jpeg', '.png', '.webp'}
 
-def get_embedding_from_photos(photo_folder: Path) -> np.ndarray | None:
-    """Folder ke saare photos se average embedding nikalo"""
+def extract_name_from_filename(filename: str) -> str:
+    """
+    'IMG-20251222-WA0135 (1) - Yashasvi Chhaliya.jpg'
+    → 'Yashasvi Chhaliya'
+    """
+    stem = Path(filename).stem  # extension hata do
+    if ' - ' in stem:
+        return stem.split(' - ')[-1].strip()
+    return stem.strip()
+
+def name_match(excel_name: str, file_name: str) -> bool:
+    """Flexible name matching — case insensitive, partial bhi"""
+    excel_clean = excel_name.strip().lower()
+    file_clean  = file_name.strip().lower()
+
+    if excel_clean == file_clean:
+        return True
+
+    # Partial match — sabhi words match hon
+    excel_parts = set(excel_clean.split())
+    file_parts  = set(file_clean.split())
+    if excel_parts == file_parts:
+        return True
+
+    # Excel name ke sabhi parts file name mein hon
+    if all(part in file_clean for part in excel_clean.split()):
+        return True
+
+    return False
+
+def get_photos_for_student(name: str, photos_dir: Path) -> list:
+    """Student ke naam se match hone wali saari photos dhundo"""
+    matched = []
+    for f in photos_dir.iterdir():
+        if f.suffix.lower() not in SUPPORTED:
+            continue
+        extracted = extract_name_from_filename(f.name)
+        if name_match(name, extracted):
+            matched.append(f)
+    return matched
+
+def get_embedding_from_photos(photo_files: list) -> np.ndarray | None:
+    """Multiple photos se average embedding nikalo"""
     embeddings = []
-    photos = list(photo_folder.glob("*.jpg")) + \
-             list(photo_folder.glob("*.jpeg")) + \
-             list(photo_folder.glob("*.png"))
-
-    if not photos:
-        return None
-
-    for photo_path in photos:
+    for photo_path in photo_files:
         try:
             img = np.array(Image.open(photo_path).convert("RGB"))
             faces = app_ai.get(img)
             if faces:
                 embeddings.append(faces[0].normed_embedding)
+                print(f"    ✓ {photo_path.name}")
+            else:
+                print(f"    ⚠ No face: {photo_path.name}")
         except Exception as e:
-            print(f"    ⚠ {photo_path.name} skip: {e}")
+            print(f"    ✗ Error {photo_path.name}: {e}")
 
     if not embeddings:
         return None
 
     avg = np.mean(embeddings, axis=0)
-    avg = avg / np.linalg.norm(avg)  # normalize
+    avg = avg / np.linalg.norm(avg)
     return avg
 
 def bulk_enroll(excel_path: str, photos_root: str):
     df = pd.read_excel(excel_path)
     photos_dir = Path(photos_root)
-    folders = [f for f in photos_dir.iterdir() if f.is_dir()]
 
+    all_files = [f for f in photos_dir.iterdir() if f.suffix.lower() in SUPPORTED]
     print(f"Total students in Excel : {len(df)}")
-    print(f"Total photo folders     : {len(folders)}")
+    print(f"Total photo files found : {len(all_files)}")
     print(f"{'='*45}\n")
 
     db = SessionLocal()
@@ -76,7 +100,7 @@ def bulk_enroll(excel_path: str, photos_root: str):
 
         print(f"Processing: {name} ({enrollment_no})")
 
-        # Already enrolled check
+        # Duplicate check
         existing = db.query(Person).filter(
             Person.enrollment_no == enrollment_no
         ).first()
@@ -85,22 +109,23 @@ def bulk_enroll(excel_path: str, photos_root: str):
             duplicate += 1
             continue
 
-        # Photo folder dhundo
-        folder = name_to_folder(name, folders)
-        if not folder:
-            print(f"  ✗ Photo folder nahi mila — skip\n")
+        # Photos dhundo
+        photos = get_photos_for_student(name, photos_dir)
+        if not photos:
+            print(f"  ✗ Koi photo nahi mili — skip\n")
             skipped += 1
             continue
 
+        print(f"  📸 {len(photos)} photo(s) mili:")
+
         # Embedding nikalo
-        print(f"  📸 {folder.name} — photos processing...")
-        embedding = get_embedding_from_photos(folder)
+        embedding = get_embedding_from_photos(photos)
         if embedding is None:
             print(f"  ✗ Koi face detect nahi hua — skip\n")
             failed += 1
             continue
 
-        # DB mein save karo
+        # DB save
         person = Person(
             name=name,
             role=role,

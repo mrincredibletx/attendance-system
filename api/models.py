@@ -11,6 +11,7 @@ class Person(Base):
     section = Column(String, nullable=True)
     email = Column(String, nullable=True)
     contact = Column(String, nullable=True)
+    password = Column(String, nullable=True)  # hashed password
     embedding = Column(String)
     created_at = Column(DateTime, default=func.now())
 
