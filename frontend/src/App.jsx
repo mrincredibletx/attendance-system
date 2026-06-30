@@ -134,7 +134,7 @@ export default function App() {
                 {todayLogs.map((log, i) => (
                   <tr key={i} style={{ borderBottom: "1px solid #e5e7eb" }}>
                     <td style={{ padding: "10px 12px", fontWeight: 600 }}>{log.name}</td>
-                    <td style={{ padding: "10px 12px", color: "#6b7280" }}>{log.roll_number || "-"}</td>
+                    <td style={{ padding: "10px 12px", color: "#6b7280" }}>{log.enrollment_no || "-"}</td>
                     <td style={{ padding: "10px 12px" }}>
                       <span style={{
                         background: log.role === "faculty" ? "#dbeafe" : "#d1fae5",
