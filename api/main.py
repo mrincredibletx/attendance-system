@@ -222,7 +222,8 @@ def get_persons(db: Session = Depends(get_db)):
         "section": p.section,
         "email": p.email,
         "contact": p.contact,
-        "embedding": p.embedding
+        "embedding": p.embedding,
+        "has_password": p.password is not None
     } for p in persons]
 
 # ── Attendance report ─────────────────────────────────

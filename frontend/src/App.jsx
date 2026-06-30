@@ -640,7 +640,7 @@ function AdminPortal({ user, onLogout }) {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#f3f4f6" }}>
-                  {["Name", "Enrollment No.", "Department", "Section", "Role", "Email"].map(h => (
+                  {["Name", "Enrollment No.", "Department", "Section", "Role", "Email", "Password"].map(h => (
                     <th key={h} style={{ padding: "10px 12px", textAlign: "left", fontSize: 13 }}>{h}</th>
                   ))}
                 </tr>
@@ -660,6 +660,7 @@ function AdminPortal({ user, onLogout }) {
                       }}>{p.role}</span>
                     </td>
                     <td style={{ padding: "10px 12px", color: "#6b7280", fontSize: 13 }}>{p.email}</td>
+                    <td style={{ padding: "10px 12px", textAlign: "center" }}>{p.has_password ? "✅ Set" : "❌ Not Set"}</td>
                   </tr>
                 ))}
               </tbody>
