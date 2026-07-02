@@ -17,20 +17,18 @@ function CameraAttendance({ user }) {
   const [stream, setStream] = useState(null);
 
   const startCamera = async (facingMode = "user") => {
-  try {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    const s = await navigator.mediaDevices.getUserMedia({ 
-      video: { facingMode: facingMode } 
-    });
-    setStream(s);
-    if (videoRef.current) videoRef.current.srcObject = s;
-    setStatus("ready");
-  } catch (e) {
-    setStatus("error");
-  }
-};
-
-const [facingMode, setFacingMode] = useState("user");
+    try {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      const s = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facingMode }
+      });
+      setStream(s);
+      if (videoRef.current) videoRef.current.srcObject = s;
+      setStatus("ready");
+    } catch (e) {
+      setStatus("error");
+    }
+  };
 
   const stopCamera = () => {
     if (stream) stream.getTracks().forEach(t => t.stop());
@@ -94,26 +92,32 @@ const [facingMode, setFacingMode] = useState("user");
           )}
         </div>
         <canvas ref={canvasRef} style={{ display: "none" }} />
-        <div style={{ display: "flex", gap: 8 }}>
-          {!stream ? (
-            <button onClick={startCamera} style={{
+
+        {!stream ? (
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => startCamera("user")} style={{
               flex: 1, padding: 10, background: "#065f46", color: "white",
               border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer"
-            }}>Start Camera</button>
-          ) : (
-            <>
-              <button onClick={captureAndIdentify} disabled={status === "processing"} style={{
-                flex: 2, padding: 10,
-                background: status === "processing" ? "#9ca3af" : "#1e40af",
-                color: "white", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer"
-              }}>{status === "processing" ? "Identifying..." : "Capture & Identify"}</button>
-              <button onClick={stopCamera} style={{
-                flex: 1, padding: 10, background: "#fee2e2", color: "#dc2626",
-                border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer"
-              }}>Stop</button>
-            </>
-          )}
-        </div>
+            }}>Front Camera</button>
+            <button onClick={() => startCamera("environment")} style={{
+              flex: 1, padding: 10, background: "#1e40af", color: "white",
+              border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer"
+            }}>Back Camera</button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={captureAndIdentify} disabled={status === "processing"} style={{
+              flex: 2, padding: 10,
+              background: status === "processing" ? "#9ca3af" : "#1e40af",
+              color: "white", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer"
+            }}>{status === "processing" ? "Identifying..." : "Capture & Identify"}</button>
+            <button onClick={stopCamera} style={{
+              flex: 1, padding: 10, background: "#fee2e2", color: "#dc2626",
+              border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer"
+            }}>Stop</button>
+          </div>
+        )}
+
         {result && (
           <div style={{
             marginTop: 16, padding: 14, borderRadius: 8,
@@ -154,32 +158,6 @@ const [facingMode, setFacingMode] = useState("user");
     </div>
   );
 }
-
-{!stream ? (
-  <div style={{ display: "flex", gap: 8 }}>
-    <button onClick={() => { setFacingMode("user"); startCamera("user"); }} style={{
-      flex: 1, padding: 10, background: "#065f46", color: "white",
-      border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer"
-    }}>Front Camera</button>
-    <button onClick={() => { setFacingMode("environment"); startCamera("environment"); }} style={{
-      flex: 1, padding: 10, background: "#1e40af", color: "white",
-      border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer"
-    }}>Back Camera</button>
-  </div>
-) : (
-  <>
-    <button onClick={captureAndIdentify} disabled={status === "processing"} style={{
-      flex: 2, padding: 10,
-      background: status === "processing" ? "#9ca3af" : "#1e40af",
-      color: "white", border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer"
-    }}>{status === "processing" ? "Identifying..." : "Capture & Identify"}</button>
-    <button onClick={stopCamera} style={{
-      flex: 1, padding: 10, background: "#fee2e2", color: "#dc2626",
-      border: "none", borderRadius: 8, fontWeight: 600, cursor: "pointer"
-    }}>Stop</button>
-  </>
-)}
-
 // ── Login Page ────────────────────────────────────────
 function LoginPage({ onLogin }) {
   const [enrollmentNo, setEnrollmentNo] = useState("");
