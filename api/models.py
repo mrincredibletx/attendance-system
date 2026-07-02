@@ -22,4 +22,5 @@ class AttendanceLog(Base):
     camera_id = Column(String, default="webcam")
     confidence = Column(Float)
     location = Column(String)
+    taken_by = Column(String, nullable=True)  # staff/admin name
     timestamp = Column(DateTime, default=func.now())
